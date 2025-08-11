@@ -1,0 +1,35 @@
+{
+  "monitor": {
+    "process_name": "YourPOSApp.exe",
+    "log_dir": "C:/ProgramData/POSMonitor/logs",
+    "performance_interval": 60,
+    "process_check_interval": 5,
+    "hang_check_interval": 5,
+    "hang_timeout_seconds": 5
+  },
+  "event_log": {
+    "enabled": true,
+    "sources": ["Application", "System"],
+    "levels": ["Error", "Warning", "Critical"],
+    "java_keywords": [
+      "java",
+      "jvm",
+      "javafx",
+      "OutOfMemoryError",
+      "StackOverflowError",
+      "NullPointerException",
+      "heap space"
+    ]
+  },
+  "service": {
+    "name": "POSMonitor",
+    "display_name": "POS Application Monitor",
+    "description": "Monitors POS application performance and stability",
+    "auto_start": true
+  },
+  "logging": {
+    "max_file_size_mb": 100,
+    "retention_days": 30,
+    "debug_mode": false
+  }
+}

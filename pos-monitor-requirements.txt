@@ -1,0 +1,12 @@
+# Core monitoring
+psutil==5.9.8
+
+# Windows-specific functionality
+pywin32==306
+wmi==1.5.1
+
+# Windows service support
+pywin32-ctypes==0.2.2
+
+# For building Windows service
+py2exe==0.13.0.1  # Alternative: pyinstaller==6.3.0
