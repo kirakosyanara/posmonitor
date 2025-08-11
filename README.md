@@ -2,58 +2,34 @@
 
 A Windows service application that monitors JavaFX Point of Sale (POS) applications for performance metrics, hangs, and crashes without requiring any modifications to the target application.
 
-## Current Development Status: Phase 1 Complete ✅
+## Current Development Status: Phase 2 Complete ✅
 
-### Implemented Features (Phase 1 - Core Monitoring)
+### Implemented Features
 
-#### Week 1: Core Monitoring Features
-1. **Performance Monitoring**
-   - CPU and memory usage tracking
-   - Thread and handle count monitoring
-   - Configurable sampling intervals (default: 60 seconds)
+#### Phase 1: Core Monitoring & Robustness (Weeks 1-2)
+- **Performance Monitoring**: CPU, memory, thread tracking with configurable intervals
+- **Hang Detection**: UI responsiveness checking with JavaFX window discovery
+- **Event Log Integration**: Windows event monitoring with Java error filtering
+- **Crash Detection**: Exit code interpretation and crash context collection
+- **Async Logging**: High-performance logging with rotation and compression
+- **Self-Monitoring**: Resource usage tracking with configurable limits
+- **Testing Suite**: Comprehensive unit and integration tests
 
-2. **Hang Detection** 
-   - UI responsiveness checking using Windows SendMessageTimeout API
-   - JavaFX window discovery and monitoring
-   - Configurable timeout threshold (default: 5 seconds)
-   - Automatic recovery detection
+#### Phase 2: Windows Service Implementation (Week 3)
+- **Service Wrapper**: Full Windows service with automatic startup
+- **Recovery Configuration**: Automatic restart on failure (3 attempts)
+- **Installation Scripts**: One-click install/uninstall with admin checks
+- **Management Tools**: Interactive batch menu and PowerShell cmdlets
+- **Service Logging**: Dedicated service logs with Windows Event Log integration
+- **Health Monitoring**: Built-in diagnostics and troubleshooting
+- **Configuration Management**: Service-aware config file handling
 
-3. **Event Log Integration**
-   - Windows Application and System event log monitoring
-   - Java-specific error pattern matching
-   - Filters for process name and severity levels
-   - Captures OutOfMemoryError, StackOverflowError, etc.
+### 🚧 Next Phase: Packaging & Deployment (Phase 3)
 
-4. **Enhanced Crash Detection**
-   - Exit code interpretation (Windows and Java-specific)
-   - Crash context collection (uptime, last metrics)
-   - Differentiation between crashes and normal termination
-
-#### Week 2: Robustness & Performance
-5. **Async Logging System**
-   - Thread-safe queue with batched writes
-   - Automatic log rotation by size with compression
-   - Configurable retention period with old file cleanup
-   - High-performance with minimal I/O blocking
-
-6. **Self-Monitoring**
-   - Monitor tracks its own resource usage
-   - Configurable CPU and memory limits
-   - Warnings when limits are exceeded
-   - Automatic garbage collection on high memory
-
-7. **Comprehensive Testing**
-   - Unit tests for all major components
-   - Integration tests for full monitoring cycle
-   - Mock-based testing for Windows APIs
-   - Test runner with coverage analysis
-
-### 🚧 Next Phase: Windows Service Implementation (Phase 2)
-
-- Windows Service wrapper using win32serviceutil
-- Service installation and management scripts
-- Auto-start and recovery configuration
-- MSI installer for production deployment
+- PyInstaller executable packaging
+- MSI installer with WiX toolset
+- Embedded Python distribution
+- Production deployment package
 
 ### 📋 Future Enhancements
 
@@ -73,40 +49,79 @@ This application is designed to monitor POS systems running on Windows 10 IoT de
 - **Lightweight** - Minimal resource usage (<50MB memory)
 - **Production ready** - Designed for 24/7 operation
 
-## Testing the Application
+## Installation and Usage
 
 ### Prerequisites
 
 - Windows 10 or later
 - Python 3.8+ 
-- Administrator privileges (for event log access)
+- Administrator privileges
 - Required packages: `pip install -r pos-monitor-requirements.txt`
 
-### Quick Test
+### Service Installation
 
-```bash
-# Monitor notepad.exe as a test
-python pos-monitor-test.py
+1. **Quick Install** (Recommended)
+   ```batch
+   # Run as Administrator
+   install-service.bat
+   ```
 
-# Monitor a specific process
-python pos-monitor-core.py "YourApp.exe"
+2. **Manual Install**
+   ```batch
+   python pos-monitor-service.py install
+   net start POSMonitor
+   ```
 
-# Run unit tests
-python run_tests.py
+### Service Management
 
-# Run tests with coverage report
-python run_tests.py --coverage
+**Using Batch Menu:**
+```batch
+manage-service.bat
+```
+
+**Using PowerShell:**
+```powershell
+Import-Module .\POSMonitor-ServiceManager.ps1
+Get-POSMonitorStatus
+Get-POSMonitorLogs -Count 20
+Test-POSMonitorHealth
+```
+
+**Using Commands:**
+```batch
+# Start/Stop service
+net start POSMonitor
+net stop POSMonitor
+
+# Check status
+sc query POSMonitor
 ```
 
 ### Configuration
 
-Edit `pos-monitor-config.json` to customize:
-- Target process name
-- Monitoring intervals  
-- Event log sources and filters
-- Log directory location
-- Async logging settings
-- Resource limits
+Edit `C:\ProgramData\POSMonitor\pos-monitor-config.json`:
+```json
+{
+  "monitor": {
+    "process_name": "YourPOSApp.exe",
+    "performance_interval": 60,
+    "hang_timeout_seconds": 5
+  }
+}
+```
+
+### Testing
+
+```bash
+# Test core functionality
+python pos-monitor-test.py
+
+# Test service installation
+test-service.bat
+
+# Run unit tests
+python run_tests.py
+```
 
 ## Architecture
 
@@ -139,9 +154,18 @@ Log files are automatically:
 - Compressed when rotated
 - Deleted after retention period
 
-## Development Roadmap
+## Troubleshooting
 
-See [development-plan.md](development-plan.md) for the complete development roadmap and timeline.
+See [SERVICE-TROUBLESHOOTING.md](SERVICE-TROUBLESHOOTING.md) for common issues and solutions.
+
+## Project Status
+
+- **Phase 1**: Core Features ✅ Complete
+- **Phase 2**: Windows Service ✅ Complete  
+- **Phase 3**: Packaging & Deployment 🚧 Next
+- **Phase 4**: Documentation & Polish 📋 Planned
+
+See [development-plan.md](development-plan.md) for detailed roadmap.
 
 ## License
 
