@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from pos_monitor import POSMonitor
+from pos_monitor_core import POSMonitor
 
 
 def start_test_process():
@@ -65,7 +65,15 @@ def main():
     config = {
         "log_dir": "C:/ProgramData/POSMonitor/logs",
         "performance_interval": 5,  # Faster for testing
-        "process_check_interval": 2
+        "process_check_interval": 2,
+        "hang_check_interval": 3,
+        "hang_timeout_seconds": 3,
+        "event_log": {
+            "enabled": True,
+            "sources": ["Application", "System"],
+            "levels": ["Error", "Warning"],
+            "java_keywords": ["java", "exception", "error"]
+        }
     }
     
     # Create log directory if it doesn't exist
