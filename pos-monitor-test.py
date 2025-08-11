@@ -68,11 +68,22 @@ def main():
         "process_check_interval": 2,
         "hang_check_interval": 3,
         "hang_timeout_seconds": 3,
+        "monitor_self": True,
+        "self_monitor_interval": 10,  # Faster for testing
+        "max_memory_mb": 50,
+        "max_cpu_percent": 10,
         "event_log": {
             "enabled": True,
             "sources": ["Application", "System"],
             "levels": ["Error", "Warning"],
             "java_keywords": ["java", "exception", "error"]
+        },
+        "logging": {
+            "async_enabled": True,
+            "max_file_size_mb": 10,
+            "retention_days": 7,
+            "batch_size": 10,
+            "flush_interval": 2
         }
     }
     

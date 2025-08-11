@@ -27,6 +27,12 @@ except ImportError:
     EventLogMonitor = None
     logging.warning("Event log module not available - event log monitoring disabled")
 
+try:
+    from pos_monitor_async_logger import AsyncLogger
+except ImportError:
+    AsyncLogger = None
+    logging.warning("Async logger not available - using synchronous logging")
+
 
 class POSMonitor:
     """Main monitoring class for POS application"""
@@ -70,6 +76,24 @@ class POSMonitor:
             self.logger.info("Event log monitoring enabled")
         else:
             self.logger.warning("Event log monitoring not available")
+        
+        # Initialize async logger if available
+        self.async_logger = None
+        if AsyncLogger and config.get("logging", {}).get("async_enabled", True):
+            self.async_logger = AsyncLogger(str(self.log_dir), config.get("logging", {}))
+            self.async_logger.start()
+            self.logger.info("Async logging enabled")
+        else:
+            self.logger.warning("Using synchronous logging")
+        
+        # Resource monitoring for the monitor itself
+        self.monitor_self = config.get("monitor_self", True)
+        self.self_monitor_interval = config.get("self_monitor_interval", 300)  # 5 minutes
+        self.resource_limits = {
+            "max_memory_mb": config.get("max_memory_mb", 50),
+            "max_cpu_percent": config.get("max_cpu_percent", 5)
+        }
+        self.self_process = psutil.Process()  # Current process
         
     def _setup_logging(self) -> logging.Logger:
         """Setup Python logging for debugging"""
@@ -130,18 +154,26 @@ class POSMonitor:
     
     def write_log_entry(self, entry: Dict[str, Any]):
         """Write a log entry to JSON file"""
-        # Create daily log file
-        today = datetime.now().strftime("%Y-%m-%d")
-        log_file = self.log_dir / f"pos_monitor_{today}.json"
-        
         # Ensure timestamp is in ISO format
         if 'timestamp' not in entry:
             entry['timestamp'] = datetime.now(timezone.utc).isoformat()
         
-        # Append to log file
-        with open(log_file, 'a', encoding='utf-8') as f:
-            json.dump(entry, f)
-            f.write('\n')
+        # Use async logger if available
+        if self.async_logger:
+            success = self.async_logger.write_entry(entry)
+            if not success:
+                self.logger.warning("Failed to queue log entry in async logger")
+        else:
+            # Fallback to synchronous logging
+            today = datetime.now().strftime("%Y-%m-%d")
+            log_file = self.log_dir / f"pos_monitor_{today}.json"
+            
+            try:
+                with open(log_file, 'a', encoding='utf-8') as f:
+                    json.dump(entry, f)
+                    f.write('\n')
+            except Exception as e:
+                self.logger.error(f"Error writing log entry: {e}")
     
     def monitor_performance(self):
         """Thread function for performance monitoring"""
@@ -357,6 +389,65 @@ class POSMonitor:
             # Wait for next check interval
             self.stop_event.wait(event_log_interval)
     
+    def monitor_self_resources(self):
+        """Monitor resource usage of the monitoring process itself"""
+        self.logger.info("Starting self-monitoring thread")
+        
+        while not self.stop_event.is_set():
+            try:
+                # Get current resource usage
+                with self.self_process.oneshot():
+                    cpu_percent = self.self_process.cpu_percent(interval=1.0)
+                    memory_info = self.self_process.memory_info()
+                    memory_mb = memory_info.rss / 1024 / 1024
+                    thread_count = self.self_process.num_threads()
+                
+                # Check resource limits
+                warnings = []
+                if memory_mb > self.resource_limits["max_memory_mb"]:
+                    warnings.append(f"Memory usage ({memory_mb:.1f}MB) exceeds limit ({self.resource_limits['max_memory_mb']}MB)")
+                
+                if cpu_percent > self.resource_limits["max_cpu_percent"]:
+                    warnings.append(f"CPU usage ({cpu_percent:.1f}%) exceeds limit ({self.resource_limits['max_cpu_percent']}%)")
+                
+                # Log self-monitoring metrics
+                log_entry = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "type": "monitor_health",
+                    "process_name": "POSMonitor",
+                    "metrics": {
+                        "cpu_percent": round(cpu_percent, 2),
+                        "memory_mb": round(memory_mb, 2),
+                        "thread_count": thread_count,
+                        "monitored_process": self.process_name,
+                        "monitored_pid": self.target_process.pid if self.target_process else None
+                    }
+                }
+                
+                # Add warnings if any
+                if warnings:
+                    log_entry["warnings"] = warnings
+                    for warning in warnings:
+                        self.logger.warning(f"Resource limit exceeded: {warning}")
+                
+                # Add async logger stats if available
+                if self.async_logger:
+                    log_entry["logger_stats"] = self.async_logger.get_stats()
+                
+                self.write_log_entry(log_entry)
+                
+                # If memory is too high, try to free some
+                if memory_mb > self.resource_limits["max_memory_mb"] * 1.5:
+                    self.logger.error("Memory usage critical, attempting garbage collection")
+                    import gc
+                    gc.collect()
+                
+            except Exception as e:
+                self.logger.error(f"Error in self-monitoring: {e}")
+            
+            # Wait for next interval
+            self.stop_event.wait(self.self_monitor_interval)
+    
     def start(self):
         """Start all monitoring threads"""
         self.logger.info(f"Starting POS Monitor for process: {self.process_name}")
@@ -374,6 +465,10 @@ class POSMonitor:
         # Add event log monitor thread if available
         if self.event_log_monitor:
             threads.append(Thread(target=self.monitor_event_logs, name="EventLogMonitor"))
+        
+        # Add self-monitoring thread if enabled
+        if self.monitor_self:
+            threads.append(Thread(target=self.monitor_self_resources, name="SelfMonitor"))
         
         # Start all threads
         for thread in threads:
@@ -402,6 +497,14 @@ class POSMonitor:
             "process_name": self.process_name
         }
         self.write_log_entry(log_entry)
+        
+        # Stop async logger if running
+        if self.async_logger:
+            self.async_logger.stop()
+            
+            # Log final stats
+            stats = self.async_logger.get_stats()
+            self.logger.info(f"Async logger stats: {stats}")
 
 
 def main():
@@ -416,6 +519,7 @@ def main():
             full_config = json.load(f)
             config = full_config.get("monitor", {})
             config["event_log"] = full_config.get("event_log", {})
+            config["logging"] = full_config.get("logging", {})
     else:
         config = {
             "log_dir": "C:/ProgramData/POSMonitor/logs",
@@ -423,11 +527,22 @@ def main():
             "process_check_interval": 5,
             "hang_check_interval": 5,
             "hang_timeout_seconds": 5,
+            "monitor_self": True,
+            "self_monitor_interval": 300,
+            "max_memory_mb": 50,
+            "max_cpu_percent": 5,
             "event_log": {
                 "enabled": True,
                 "sources": ["Application", "System"],
                 "levels": ["Error", "Warning", "Critical"],
                 "java_keywords": ["java", "jvm", "javafx", "exception", "error"]
+            },
+            "logging": {
+                "async_enabled": True,
+                "max_file_size_mb": 100,
+                "retention_days": 30,
+                "batch_size": 50,
+                "flush_interval": 5
             }
         }
     
