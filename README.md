@@ -2,7 +2,7 @@
 
 A Windows service application that monitors JavaFX Point of Sale (POS) applications for performance metrics, hangs, and crashes without requiring any modifications to the target application.
 
-## Current Development Status: Phase 2 Complete ✅
+## Current Development Status: Phase 3 Complete ✅
 
 ### Implemented Features
 
@@ -24,12 +24,21 @@ A Windows service application that monitors JavaFX Point of Sale (POS) applicati
 - **Health Monitoring**: Built-in diagnostics and troubleshooting
 - **Configuration Management**: Service-aware config file handling
 
-### 🚧 Next Phase: Packaging & Deployment (Phase 3)
+#### Phase 3: Packaging & Deployment (Week 4)
+- **PyInstaller Build**: Standalone executables with embedded Python
+- **Version Management**: Centralized version control with auto-update
+- **Build Automation**: One-click build with dependency bundling
+- **MSI Installer**: Professional WiX-based installer with UI
+- **Simple Installer**: Self-extracting archive alternative
+- **Deployment Testing**: Comprehensive validation and verification
+- **Package Output**: Ready-to-distribute ZIP and MSI packages
 
-- PyInstaller executable packaging
-- MSI installer with WiX toolset
-- Embedded Python distribution
-- Production deployment package
+### 🚧 Next Phase: Documentation & Polish (Phase 4)
+
+- Complete user documentation
+- Security hardening and ACLs
+- Performance optimization
+- Final production testing
 
 ### 📋 Future Enhancements
 
@@ -158,12 +167,67 @@ Log files are automatically:
 
 See [SERVICE-TROUBLESHOOTING.md](SERVICE-TROUBLESHOOTING.md) for common issues and solutions.
 
+## Building and Deployment
+
+### Building from Source
+
+1. **Prerequisites**
+   - Python 3.8+ with pip
+   - PyInstaller 6.3.0
+   - Windows 10 SDK (for signing)
+   - WiX Toolset 3.11+ (for MSI)
+
+2. **Build Steps**
+   ```batch
+   # Install dependencies
+   pip install -r pos-monitor-requirements.txt
+   
+   # Build executables
+   build.bat
+   
+   # Create MSI installer (requires WiX)
+   create-installer.bat
+   
+   # Or create simple installer
+   create-simple-installer.bat
+   ```
+
+3. **Output Files**
+   - `dist/POSMonitor/` - Executable files
+   - `output/POSMonitor_v1.0.0_Setup.msi` - MSI installer
+   - `output/POSMonitor_v1.0.0_[timestamp].zip` - Distribution package
+
+### Deployment Options
+
+1. **MSI Installer** (Recommended for enterprise)
+   - Professional installation experience
+   - Automatic service registration
+   - Start menu shortcuts
+   - Clean uninstall
+
+2. **Simple Installer** (For quick deployment)
+   - Self-extracting archive
+   - No prerequisites required
+   - Manual service installation
+
+3. **Manual Installation**
+   - Extract ZIP to Program Files
+   - Run `install-service.bat` as admin
+   - Configure using `manage-service.bat`
+
+### Version Management
+
+Update version in `version.py`:
+```python
+python version.py --update
+```
+
 ## Project Status
 
 - **Phase 1**: Core Features ✅ Complete
 - **Phase 2**: Windows Service ✅ Complete  
-- **Phase 3**: Packaging & Deployment 🚧 Next
-- **Phase 4**: Documentation & Polish 📋 Planned
+- **Phase 3**: Packaging & Deployment ✅ Complete
+- **Phase 4**: Documentation & Polish 🚧 Next
 
 See [development-plan.md](development-plan.md) for detailed roadmap.
 

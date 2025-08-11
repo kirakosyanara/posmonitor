@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  
+  <!-- Product Information -->
+  <Product Id="*" 
+           Name="POS Monitor" 
+           Language="1033" 
+           Version="1.0.0.0" 
+           Manufacturer="UniSight" 
+           UpgradeCode="{E5D6A123-4567-89AB-CDEF-0123456789AB}">
+    
+    <Package InstallerVersion="200" 
+             Compressed="yes" 
+             InstallScope="perMachine" 
+             Platform="x64"
+             Description="POS Application Monitor Service"
+             Comments="Monitors POS applications for performance, hangs, and crashes"
+             Manufacturer="UniSight" />
+    
+    <!-- Upgrade Logic -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    
+    <!-- Media -->
+    <MediaTemplate EmbedCab="yes" />
+    
+    <!-- Icon -->
+    <Icon Id="pos_monitor.ico" SourceFile="..\assets\pos-monitor.ico" />
+    <Property Id="ARPPRODUCTICON" Value="pos_monitor.ico" />
+    
+    <!-- License -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+    
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="POS Monitor" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="ServiceComponents" />
+      <ComponentGroupRef Id="ConfigComponents" />
+    </Feature>
+    
+    <!-- UI -->
+    <UIRef Id="WixUI_Minimal" />
+    
+    <!-- Launch Conditions -->
+    <Condition Message="This application requires Windows 10 or higher.">
+      <![CDATA[Installed OR (VersionNT >= 603)]]>
+    </Condition>
+    
+    <Condition Message="This application requires administrator privileges.">
+      <![CDATA[Privileged]]>
+    </Condition>
+    
+    <!-- Custom Actions -->
+    <CustomAction Id="InstallService" 
+                  Directory="INSTALLFOLDER" 
+                  ExeCommand="[INSTALLFOLDER]POSMonitorService.exe install" 
+                  Execute="deferred" 
+                  Return="check" 
+                  Impersonate="no" />
+    
+    <CustomAction Id="StartService" 
+                  Directory="INSTALLFOLDER" 
+                  ExeCommand="net start POSMonitor" 
+                  Execute="deferred" 
+                  Return="ignore" 
+                  Impersonate="no" />
+    
+    <CustomAction Id="StopService" 
+                  Directory="INSTALLFOLDER" 
+                  ExeCommand="net stop POSMonitor" 
+                  Execute="deferred" 
+                  Return="ignore" 
+                  Impersonate="no" />
+    
+    <CustomAction Id="UninstallService" 
+                  Directory="INSTALLFOLDER" 
+                  ExeCommand="[INSTALLFOLDER]POSMonitorService.exe remove" 
+                  Execute="deferred" 
+                  Return="ignore" 
+                  Impersonate="no" />
+    
+    <!-- Install Sequence -->
+    <InstallExecuteSequence>
+      <Custom Action="StopService" Before="UninstallService">REMOVE~="ALL"</Custom>
+      <Custom Action="UninstallService" Before="RemoveFiles">REMOVE~="ALL"</Custom>
+      <Custom Action="InstallService" After="InstallFiles">NOT Installed</Custom>
+      <Custom Action="StartService" After="InstallService">NOT Installed</Custom>
+    </InstallExecuteSequence>
+    
+  </Product>
+  
+  <!-- Directory Structure -->
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="CompanyFolder" Name="UniSight">
+          <Directory Id="INSTALLFOLDER" Name="POS Monitor" />
+        </Directory>
+      </Directory>
+      
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="DataCompanyFolder" Name="UniSight">
+          <Directory Id="DATADIR" Name="POSMonitor">
+            <Directory Id="LOGDIR" Name="logs" />
+          </Directory>
+        </Directory>
+      </Directory>
+      
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="POS Monitor" />
+      </Directory>
+    </Directory>
+  </Fragment>
+  
+  <!-- Components -->
+  <Fragment>
+    <!-- Product Components -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="ServiceExecutable" Guid="{12345678-1234-1234-1234-123456789012}">
+        <File Id="POSMonitorService.exe" 
+              Source="..\dist\POSMonitor\POSMonitorService.exe" 
+              KeyPath="yes" />
+      </Component>
+      
+      <Component Id="MonitorExecutable" Guid="{12345678-1234-1234-1234-123456789013}">
+        <File Id="POSMonitor.exe" 
+              Source="..\dist\POSMonitor\POSMonitor.exe" />
+      </Component>
+      
+      <Component Id="ManagementScripts" Guid="{12345678-1234-1234-1234-123456789014}">
+        <File Id="manage_service.bat" Source="..\manage-service.bat" />
+        <File Id="ServiceManager.ps1" Source="..\POSMonitor-ServiceManager.ps1" />
+      </Component>
+      
+      <Component Id="Documentation" Guid="{12345678-1234-1234-1234-123456789015}">
+        <File Id="README.md" Source="..\README.md" />
+        <File Id="TROUBLESHOOTING.md" Source="..\SERVICE-TROUBLESHOOTING.md" />
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Service Components -->
+    <ComponentGroup Id="ServiceComponents" Directory="INSTALLFOLDER">
+      <Component Id="ServiceRegistry" Guid="{12345678-1234-1234-1234-123456789016}">
+        <RegistryKey Root="HKLM" 
+                     Key="SOFTWARE\UniSight\POSMonitor">
+          <RegistryValue Type="string" Name="Version" Value="[ProductVersion]" />
+          <RegistryValue Type="string" Name="InstallPath" Value="[INSTALLFOLDER]" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Config Components -->
+    <ComponentGroup Id="ConfigComponents" Directory="DATADIR">
+      <Component Id="ConfigFile" Guid="{12345678-1234-1234-1234-123456789017}">
+        <File Id="config.json" 
+              Source="..\pos-monitor-config.json" 
+              Name="pos-monitor-config.json" />
+        <CreateFolder Directory="LOGDIR" />
+        <util:PermissionEx User="SYSTEM" GenericAll="yes" />
+        <util:PermissionEx User="Administrators" GenericAll="yes" />
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Shortcuts -->
+    <Fragment>
+      <DirectoryRef Id="ApplicationProgramsFolder">
+        <Component Id="ApplicationShortcut" Guid="{12345678-1234-1234-1234-123456789018}">
+          <Shortcut Id="ServiceManagerShortcut"
+                    Name="POS Monitor Manager"
+                    Description="Manage POS Monitor Service"
+                    Target="[INSTALLFOLDER]manage-service.bat"
+                    WorkingDirectory="INSTALLFOLDER" />
+          
+          <Shortcut Id="LogsShortcut"
+                    Name="POS Monitor Logs"
+                    Description="View POS Monitor Logs"
+                    Target="[LOGDIR]"
+                    WorkingDirectory="LOGDIR" />
+          
+          <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+          <RegistryValue Root="HKCU" 
+                         Key="Software\UniSight\POSMonitor" 
+                         Name="installed" 
+                         Type="integer" 
+                         Value="1" 
+                         KeyPath="yes" />
+        </Component>
+      </DirectoryRef>
+    </Fragment>
+  </Fragment>
+</Wix>
